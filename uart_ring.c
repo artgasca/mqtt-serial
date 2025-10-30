@@ -1,5 +1,5 @@
-#include "uart_rda_ring.h"
 
+#include "uart_ring.h"
 // ====== Ring buffer ======
 static volatile uint8_t rb[UART_RING_SIZE];
 static volatile uint16_t r_head = 0, r_tail = 0;
@@ -34,7 +34,7 @@ void uart_write_u8(uint8_t b) {
    fputc(b, UART_STREAM);
 }
 
-void uart_write_buf(const uint8_t *buf, uint16_t len) {
+void uart_write_buf(uint8_t *buf, uint16_t len) {
    while (len--) fputc(*buf++, UART_STREAM);
 }
 

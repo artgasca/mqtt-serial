@@ -1,5 +1,5 @@
-#ifndef UART_RDA_RING_H
-#define UART_RDA_RING_H
+#ifndef UART_RING_H
+#define UART_RING_H
 
 #include <stdint.h>
 #include <stdbool.h>
@@ -18,7 +18,7 @@ void     uart_ring_flush(void);
 
 // Escritura directa a UART (bloqueante)
 void     uart_write_u8(uint8_t b);
-void     uart_write_buf(const uint8_t *buf, uint16_t len);
+void     uart_write_buf(uint8_t *buf, uint16_t len);
 
 // Debes definir el stream en tu main (o aquí si prefieres)
 #ifndef UART_STREAM

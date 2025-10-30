@@ -1,10 +1,16 @@
 #include <18F67K40.h>          // Ajusta tu MCU
-#fuses NOWDT, NOLVP, NOMCLR
-#use delay(crystal=16000000)   // Ajusta a tu oscilador
-#use rs232(UART1, baud=115200, parity=N, bits=8, stop=1, ERRORS, stream=TCP)
+#device ADC = 10
+#fuses HS
+#include "protolink.h"
 
-#include "uart_rda_ring.h"
-#include "mqtt_serial.h"
+#use delay(crystal=20mhz)
+#use rs232(baud=115200, parity=N, UART2, bits=8, stop=1,stream=TCP,errors)
+
+
+#include "../mqtt.serial.h"
+#include"../uart_ring.h"
+
+#include "../"
 
 // ====== Tick en ms con Timer1 ======
 volatile uint32_t g_ms = 0;

@@ -80,4 +80,6 @@ int16 mqtt_transport_read(void);
 void mqtt_transport_write(int8 *buf, int16 len);
 void mqtt_transport_write_u8(int8 b);
 
+
+#include "mqtt_serial.c"
 #endif /* MQTT_SERIAL_H */

@@ -48,13 +48,13 @@ static int16 next_id(mqtt_client_t *c){
 // ===== API =====
 void mqtt_init(mqtt_client_t *c,
                char *client_id,
-               char *user,
-               char *pass,
+               char *user_id,
+               char *pass_id,
                uint16_t keepalive_sec){
   memset(c,0,sizeof(*c));
   c->client_id = client_id;
-  c->user      = user;
-  c->pass      = pass;
+  c->user_id      = user_id;
+  c->pass_id      = pass_id;
   c->keepalive_sec = keepalive_sec;
   c->state = MQTT_DISCONNECTED;
   c->next_pkt_id = 1;
@@ -68,8 +68,8 @@ bool mqtt_connect(mqtt_client_t *c){
   uint8_t vh[10]; // enough for "MQTT" + level/flags/keepalive
   // Precompute remaining length
   int16 len_id = 2 + (int16)strlen(c->client_id);
-  int16 len_user = (c->user? 2+(int16)strlen(c->user) : 0);
-  int16 len_pass = (c->pass? 2+(int16)strlen(c->pass) : 0);
+  int16 len_user = (c->user_id? 2+(int16)strlen(c->user_id) : 0);
+  int16 len_pass = (c->pass_id? 2+(int16)strlen(c->pass_id) : 0);
 
   int16 payload_len = len_id + len_user + len_pass;
   int16 var_len = 2+4 + 1 + 1 + 2; // proto name len(2) + "MQTT"(4) + level + flags + keepalive(2)
@@ -79,12 +79,12 @@ bool mqtt_connect(mqtt_client_t *c){
   wr_rem_len(rem);
 
   // Variable header
-  wr_u8(0x00); wr_u8(0x04); wr_buf("MQTT",4); // Protocol Name
+  wr_u8(0x00); wr_u8(0x04); wr_buf(&"MQTT",4); // Protocol Name
   wr_u8(0x04); // Level 4 (v3.1.1)
 
   uint8_t flags = 0x02; // CleanSession=1
-  if (c->user) flags |= 0x80;
-  if (c->pass) flags |= 0x40;
+  if (c->user_id) flags |= 0x80;
+  if (c->pass_id) flags |= 0x40;
   wr_u8(flags);
 
   wr_u8((uint8_t)(c->keepalive_sec>>8));
@@ -92,16 +92,16 @@ bool mqtt_connect(mqtt_client_t *c){
 
   // Payload
   wr_utf8_str(c->client_id);
-  if (c->user) wr_utf8_str(c->user);
-  if (c->pass) wr_utf8_str(c->pass);
+  if (c->user_id) wr_utf8_str(c->user_id);
+  if (c->pass_id) wr_utf8_str(c->pass_id);
 
   c->state = MQTT_CONNECTING;
   c->last_tx_ms = platform_millis();
   return true;
 }
 
-bool mqtt_publish_qos0(mqtt_client_t *c,  char *topic,
-                        int16 *payload, int32 len, bool retain){
+int1 mqtt_publish_qos0(mqtt_client_t *c, char *topic,
+                       int8 *payload, int32 len, int1 retain){
   if (c->state != MQTT_CONNECTED) return false;
 
   int16 tlen = (uint16_t)strlen(topic);
@@ -122,7 +122,7 @@ bool mqtt_publish_qos0(mqtt_client_t *c,  char *topic,
   return true;
 }
 
-bool mqtt_subscribe_qos0(mqtt_client_t *c,  char *topic, mqtt_msg_cb_t cb){
+int1 mqtt_subscribe_qos0(mqtt_client_t *c, char *topic,mqtt_msg_cb_ptr cb){
   if (c->state != MQTT_CONNECTED) return false;
 
   // Registra callback

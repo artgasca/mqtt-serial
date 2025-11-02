@@ -4,95 +4,146 @@
 #include "protolink.h"
 
 #use delay(crystal=20mhz)
-#use rs232(baud=115200, parity=N, UART2, bits=8, stop=1,stream=TCP,errors)
+#use rs232(baud=115200,parity=N,UART2,bits=8,stream=TCP,errors)
+#use rs232(baud=115200,parity=N,UART3,bits=8,stream=pc,errors)
 
 
-#include "../mqtt.serial.h"
-#include"../uart_ring.h"
+#include "mqtt/mqtt.c"
 
-#include "../"
+ //PARAMETROS MQTT
 
-// ====== Tick en ms con Timer1 ======
-volatile uint32_t g_ms = 0;
+//char broker[] = {"tuna-iot.com"};
+char broker[] = {"lora.galio.dev"};
+int16 port = 1883;
+char username[] = {"galiomosquitto"};
+char pass[] = {"g4L10mqtt$."};
+char clientId [] = {"protolink-v1-test"};
 
-#int_timer1
-void TMR1_ISR(void){
-   // Config: Timer1 a 1ms
-   g_ms++;
+char topicOut[50];
+char topicIn[50] ;
+
+
+// Tópico MQTT ? literal constante, no se modifica
+//char topicTest[] = "devices/update/device1";
+uint8_t topicTest[] = "devices/update/device1";
+// Payload JSON ? buffer modificable (permite actualizar valores dinámicamente)
+uint8_t payload[] = "{\"data\":\"hola\"}";
+
+
+
+
+#define POLLING_TIME 20
+int segundos = 0;
+int cuenta = 0;
+boolean SEND_DATA =true;
+
+#INT_TIMER0
+void  TIMER0_isr(void){
+ cuenta++;
+ if(cuenta >=5){
+   cuenta =0;
+   segundos++;
+    if (segundos >=POLLING_TIME) {
+      segundos = 0;
+      SEND_DATA = true;
+    }
+ }
+}
+boolean connectBroker(){
+  fprintf(pc, "Reiniciando LANTRONIX...\r\n" );
+  /*if (!lantronixInit()) {
+    fprintf(pc, "Fallo al inicializar lantronix\r\n" );
+    fprintf(pc, "Revisa las configuraciones y reinica el dispositivo\r\n" );
+    return false;
+  }
+  fprintf(pc, "Lantronix OK!\r\n" );
+  delay_ms(2000);*/
+  if (!mqttConnect(&broker,port)) {
+    fprintf(pc, "Fallo conexion mqtt\r\n" );
+    return false;
+  }
+  fprintf(pc, "Conectado a: %s\r\n",broker );
+  delay_ms(5000);
+  //sprintf(topicIn,"devices/receiveData/%s",mac);
+  sprintf(topicIn,"test/topic/downlink");
+  fprintf(pc, "Suscribiendo a: %s\r\n",topicIn );
+  if (!mqttSubscribe(topicIn)) {
+    fprintf(pc, "Sub error\r\n" );
+    return false;
+  }
+  fprintf(pc, "OK\r\n" );
+  return true;
 }
 
-uint32_t platform_millis(void){ return g_ms; }
+void main(void){
+  set_tris_a(0b00000000);
+  set_tris_g(0b00000100);
+  setup_timer_0(RTCC_INTERNAL|RTCC_DIV_16);		//210 ms overflow
+  enable_interrupts(GLOBAL);
+  enable_interrupts(INT_TIMER0);
+  enable_interrupts(INT_RDA2);
+  output_low(LED1);
+  delay_ms(1000);
+    memset(replybuffer, 0xA5, sizeof replybuffer);
 
-static void systick_init(void){
-   setup_timer_1(T1_INTERNAL | T1_DIV_BY_8); // 16 MHz / 8 = 2 MHz => 2000 ticks/ms si PR cargado
-   // CCS: usa set_timer1() para precarga si buscas 1ms exacto; aproximamos:
-   set_timer1(65535 - 2000);  // ~1ms a 2MHz
-   enable_interrupts(INT_TIMER1);
-   enable_interrupts(GLOBAL);
-}
+  //while(1);
+  fprintf(pc,">>>TunaBoard MQTT Example<<<\r\n");
+  mqttCredentials(&username,&pass,&clientId); //Configura en variables los datos para conexion
+  int1 response = connectBroker(); //<--Agregar las subscripciones
+  delay_ms(5);
+  /*if(!response){ while(1);
+  }*/
+  //sprintf(topicOut,"devices/update/%s",mac);
+  sprintf(topicOut,"devices/update/device1");
 
-// ====== Callbacks de MQTT ======
-void on_cmd_cb(const char *topic, const uint8_t *payload, uint32_t len){
-   // Ejemplo: comando recibido
-   // Ojo: payload no está null-terminated
-   // Haz tu lógica (toggle, parse JSON, etc.)
-}
+ 
+ while(true){
+    if (mqttClientConnected()) {
+      if (mqttPacketAvailable()) {
+        if (mqttCheckData() == MQTT_CTRL_PUBLISH) {
+            delay_ms(1);
+//          char reqTopic[50];
+//          char reqPayload[50];
+//          int payloadLength;
+//          mqttReadPacket(&reqTopic,&reqPayload,&payloadLength);
+//          fprintf(pc, "Topico recibido: %s\r\n",reqTopic );
+//          fprintf(pc, "Payload recibido: %s\r\n",reqPayload );
+//          fprintf(pc, "Length: %d\r\n",payloadLength );
+//          if (!strcmp(reqPayload,(char*)"ON")) {
+//            fprintf(pc, "Encender\r\n" );
+//            output_high(LED1);
+//          }
+//          if (!strcmp(reqPayload,(char*)"OFF")) {
+//            fprintf(pc, "Apagar\r\n" );
+//            output_low(LED1);
+//          }
 
-void on_conf_cb(const char *topic, const uint8_t *payload, uint32_t len){
-   // Ejemplo: configuración
-}
-
-// ====== App ======
-mqtt_client_t mq;
-
-void mqtt_bootstrap(void){
-   uart_ring_init();
-   systick_init();
-   enable_interrupts(INT_RDA);    // Habilita ISR UART
-   enable_interrupts(GLOBAL);
-
-   mqtt_init(&mq,
-             "protolink-001",   // ClientID
-             "user",            // user (o NULL)
-             "pass",            // pass (o NULL)
-             30);               // keepalive s
-
-   // Asegúrate de que tu conversor ya haya abierto el TCP al broker
-   // (algunos usan AT o config por web; aquí asumimos ya conectado)
-   mqtt_connect(&mq);
-}
-
-void publish_telemetry(void){
-   const char *topic = "galio/pl001/telemetry";
-   char buf[64];
-   int n = sprintf(buf, "{\"uptime\":%lu}", (unsigned long)platform_millis());
-   mqtt_publish_qos0(&mq, topic, (const uint8_t*)buf, (uint32_t)n, false);
-}
-
-void main(){
-   mqtt_bootstrap();
-
-   // tras conectarnos, nos suscribimos
-   // (puede que el SUB se dispare unos ms después del CONNACK; no pasa nada)
-   mqtt_subscribe_qos0(&mq, "galio/pl001/cmd",  on_cmd_cb);
-   mqtt_subscribe_qos0(&mq, "galio/pl001/conf", on_conf_cb);
-
-   uint32_t tPub = platform_millis();
-
-   while(TRUE){
-      uint32_t now = platform_millis();
-
-      // Bucle MQTT: parsea RX y maneja keepalive/ping
-      mqtt_loop(&mq, now);
-
-      // Publica cada 1000 ms
-      if ((now - tPub) >= 1000u){
-         tPub = now;
-         if (mq.state == MQTT_CONNECTED){
-            publish_telemetry();
-         } else if (mq.state == MQTT_DISCONNECTED){
-            mqtt_connect(&mq);
-         }
+        }
+        //printAvailableData();
       }
-   }
+      if (SEND_DATA) {
+
+        SEND_DATA = false;
+        /*if (mqttSendPing()) {
+          fprintf(pc, "Sigo Online!\r\n" );
+        }else{
+          fprintf(pc, "Ping error!!\r\n" );
+        }
+        delay_ms(3000);*/
+        fprintf(pc,"Publicando a: %s\r\n",topicOut);
+        mqttPublish(&topicTest,&payload,strlen(payload));
+
+      }
+    }else{
+      fprintf(pc, "SE PERDIO LA CONEXION AL BROKER!!\r\n" );
+      delay_ms(5000);
+      if (connectBroker()) {
+        fprintf(pc, "RECONECTADO!\r\n" );
+      }
+    }
+
+
+  }
 }
+
+

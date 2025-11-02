@@ -1,85 +1,84 @@
-#ifndef MQTT_SERIAL_H
-#define MQTT_SERIAL_H
+#ifndef _mqtt_serial_H
+#define _mqtt_serial_H
 
-/* ============ Config (ajusta según tu RAM/uso) ============ */
-#ifndef MQTT_MAX_PACKET
- #define MQTT_MAX_PACKET   512u
+//Desactivar con 0
+#define MQTT_DEBUG 1
+// Usar 3 (MQTT 3.0) o 4 (MQTT 3.1.1) Libreria implementada para 3.1.1
+#define MQTT_PROTOCOL_LEVEL   4
+
+#define MQTT_CTRL_CONNECT     0x1
+#define MQTT_CTRL_CONNECTACK  0x2
+#define MQTT_CTRL_PUBLISH     0x3
+#define MQTT_CTRL_PUBACK      0x4
+#define MQTT_CTRL_PUBREC      0x5
+#define MQTT_CTRL_PUBREL      0x6
+#define MQTT_CTRL_PUBCOMP     0x7
+#define MQTT_CTRL_SUBSCRIBE   0x8
+#define MQTT_CTRL_SUBACK      0x9
+#define MQTT_CTRL_UNSUBSCRIBE 0xA
+#define MQTT_CTRL_UNSUBACK    0xB
+#define MQTT_CTRL_PINGREQ     0xC
+#define MQTT_CTRL_PINGRESP    0xD
+#define MQTT_CTRL_DISCONNECT  0xE
+
+#define MQTT_QOS_1 0x1
+#define MQTT_QOS_0 0x0
+
+#define CONNECT_TIMEOUT_MS 6000
+#define PUBLISH_TIMEOUT_MS 500
+#define PING_TIMEOUT_MS    500
+#define SUBACK_TIMEOUT_MS  500
+
+// Adjust as necessary, in seconds.  Default to 5 minutes.
+#define MQTT_CONN_KEEPALIVE 300
+
+// Largest full packet we're able to send.
+// Need to be able to store at least ~90 chars for a connect packet with full
+// 23 char client ID.
+#define MAXBUFFERSIZE 256
+
+#define MQTT_CONN_USERNAMEFLAG    0x80
+#define MQTT_CONN_PASSWORDFLAG    0x40
+#define MQTT_CONN_WILLRETAIN      0x20
+#define MQTT_CONN_WILLQOS_1       0x08
+#define MQTT_CONN_WILLQOS_2       0x18
+#define MQTT_CONN_WILLFLAG        0x04
+#define MQTT_CONN_CLEANSESSION    0x02
+
+
+//CODIGO DE CONEXION A SERVER
+#define MQTT_CONNECTION_ACCEPTED        0x00
+#define MQTT_REFUSED_PROTOCOL_VERSION   0x01
+#define MQTT_REFUSED_ID_REJECTED        0x02
+#define MQTT_REFUSED_SERVER_UNAVAILABLE 0x03
+#define MQTT_REFUSED_BAD_USERNAME_PASS  0x04
+#define MQTT_REFUSED_NOT_AUTHORIZED     0x05
+
+int MQTT_SUB_COUNT = 1;
+
+
+struct mqtt_data{
+  uint8_t clientid[50];
+  uint8_t username[50];
+  uint8_t password[50];
+  uint8_t server[50];
+  uint16_t port;
+  boolean connected;
+  boolean available;
+}mqtt;
+
+uint8_t mqttPacket[MAXBUFFERSIZE];
+
+
+int connectPacket(char *packet); 
+boolean mqttConnect(char *server, int16 port);
+void mqttCredentials(char *userName, char *passWord,char *userId);
+void mqttReadPacket(char *receivedTopic,char *receivedPayload);
+
+
+uint8_t write_utf8_str(uint8_t *p,  char *s);
+uint8_t encode_rl(uint32_t rl, uint8_t *out);
+
+// --- Estado del Packet Identifier ---
+uint16_t MQTT_PID = 1;  // Â¡nunca 0! 1..65535, luego vuelve a 1
 #endif
-#ifndef MQTT_MAX_TOPIC
- #define MQTT_MAX_TOPIC    96u
-#endif
-#ifndef MQTT_MAX_SUBS
- #define MQTT_MAX_SUBS     6u
-#endif
-
-/* ============ Estados (sin enum) ============ */
-#define MQTT_STATE_DISCONNECTED   (0u)
-#define MQTT_STATE_CONNECTING     (1u)
-#define MQTT_STATE_CONNECTED      (2u)
-
-/* Aliases opcionales */
-#define MQTT_DISCONNECTED MQTT_STATE_DISCONNECTED
-#define MQTT_CONNECTING   MQTT_STATE_CONNECTING
-#define MQTT_CONNECTED    MQTT_STATE_CONNECTED
-
-
-
-/* ============ Firma de callback (typedef de puntero) ============ */
-/* CCS se lleva mejor si el typedef de puntero a función está FUERA de structs */
-typedef void (*mqtt_msg_cb_ptr)(char *, int8 *, int32);
-
-/* ============ Estructura de suscripción (separada) ============ */
-struct mqtt_sub_s {
-  char              topic[MQTT_MAX_TOPIC];
-  mqtt_msg_cb_ptr   cb;      /* puntero a función simple */
-  int1                used;    /* 0/1 */
-};
-typedef struct mqtt_sub_s mqtt_sub_t;
-
-/* ============ Estructura del cliente MQTT (con nombre) ============ */
-struct mqtt_client_s {
-  /* Conexión (sin const para paz con CCS) */
-  char  *client_id;
-  char  *user_id;
-  char  *pass_id;
-  int16    keepalive_sec;
-
-  /* Runtime */
-  int8     state;        /* MQTT_STATE_* */
-  int32    last_rx_ms;
-  int32    last_tx_ms;
-  int16    next_pkt_id;
-
-  /* Suscripciones */
-  mqtt_sub_t subs[MQTT_MAX_SUBS];
-};
-typedef struct mqtt_client_s mqtt_client_t;
-
-/* ============ API principal ============ */
-void mqtt_init(mqtt_client_t *c,
-               char *client_id,
-               char *user_id,
-               char *pass_id,
-               uint16_t keepalive_sec);
-
-int1 mqtt_connect(mqtt_client_t *c);                     /* envía CONNECT */
-void mqtt_loop(mqtt_client_t *c, int32 now_ms);            /* procesa RX/keepalive */
-
-int1 mqtt_publish_qos0(mqtt_client_t *c, char *topic,
-                       int8 *payload, int32 len, int1 retain);
-
-int1 mqtt_subscribe_qos0(mqtt_client_t *c, char *topic,
-                         mqtt_msg_cb_ptr cb);
-
-/* ============ Tick de plataforma (lo das tú) ============ */
-int32 platform_millis(void);
-
-/* ============ Transporte (tu ring/uart) ============ */
-int16  mqtt_transport_available(void);
-int16 mqtt_transport_read(void);
-void mqtt_transport_write(int8 *buf, int16 len);
-void mqtt_transport_write_u8(int8 b);
-
-
-#include "mqtt_serial.c"
-#endif /* MQTT_SERIAL_H */

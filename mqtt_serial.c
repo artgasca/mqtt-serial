@@ -13,9 +13,9 @@ static void wr_u8(uint8_t b){ mqtt_transport_write_u8(b); }
 static void wr_buf( void* p, uint16_t n){ mqtt_transport_write(( uint8_t*)p, n); }
 
 static void wr_utf8_str( char *s){
-   /*int16 l_ = (uint16_t)strlen(s);
+   int16 l_ = (uint16_t)strlen(s);
    int8 h = (uint8_t)((l_>>8)&0xFF), l_=(int8)(l_&0xFF);
-   wr_u8(h); wr_u8(l_); wr_buf(s, l_);*/
+   wr_u8(h); wr_u8(l_); wr_buf(s, l_);
 }
 
 static void wr_rem_len(uint32_t x){

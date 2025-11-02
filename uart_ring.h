@@ -25,5 +25,5 @@ void     uart_write_buf(uint8_t *buf, uint16_t len);
 #define UART_STREAM  TCP     // nombre del stream #use rs232(..., stream=TCP)
 #endif
 
-#include "uart_ring.c"
+//#include "uart_ring.c"
 #endif

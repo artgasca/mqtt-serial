@@ -2,7 +2,7 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <string.h>
-#include "mqtt.h"
+#include "mqtt_serial.h"
 
 #define DEFAULT_TIMEOUT_MS 2000 // DIVIDIDP/1000 =  250 mS
 

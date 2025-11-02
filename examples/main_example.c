@@ -8,7 +8,7 @@
 #use rs232(baud=115200,parity=N,UART3,bits=8,stream=pc,errors)
 
 
-#include "mqtt/mqtt.c"
+#include "mqtt_serial.c"
 
  //PARAMETROS MQTT
 

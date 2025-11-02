@@ -147,7 +147,7 @@ void mqttReadPacket(char *outTopic, char *outPayload, int *outLen) {
   uint8_t rl = mqttPacket[0];
   uint16_t tlen = make16(mqttPacket[1], mqttPacket[2]);
 
-  // copia tópico
+  // copia topico
   memcpy(outTopic, &mqttPacket[3], tlen);
   outTopic[tlen] = '\0';
 

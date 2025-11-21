@@ -14,14 +14,8 @@
 
  //PARAMETROS MQTT
 
-//char broker[] = {"tuna-iot.com"};
 char broker[] = {"lora.galio.dev"};
 int16 port = 1883;
-//char username[] = {"galiomosquitto"};
-//char pass[] = {"g4L10mqtt$."};
-//char clientId [] = {"protolink-v1-test"};
-
-
 /*
  * Configurar los parametros dando click derecho sobre el proyecto en MPLAB
  * Properties> Conf:[default] > CCS C Compiler > Extra Outputs Flags

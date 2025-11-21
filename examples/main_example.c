@@ -9,15 +9,29 @@
 
 
 #include "mqtt_serial.c"
+#define STR_HELPER(x)  #x
+#define STR(x)         STR_HELPER(x)
 
  //PARAMETROS MQTT
 
 //char broker[] = {"tuna-iot.com"};
 char broker[] = {"lora.galio.dev"};
 int16 port = 1883;
-char username[] = {"galiomosquitto"};
-char pass[] = {"g4L10mqtt$."};
-char clientId [] = {"protolink-v1-test"};
+//char username[] = {"galiomosquitto"};
+//char pass[] = {"g4L10mqtt$."};
+//char clientId [] = {"protolink-v1-test"};
+
+
+/*
+ * Configurar los parametros dando click derecho sobre el proyecto en MPLAB
+ * Properties> Conf:[default] > CCS C Compiler > Extra Outputs Flags
+ * agregar el siguiente comando y cambiar a como se requiera:
+ * #MQTT_USER=username #MQTT_PASS=1234 #MQTT_CLIENT=client_id
+ * esto se compila y se agrega de manera automatica sin harcodear directo.
+ */
+char username[] = STR(MQTT_USER);
+char pass[] = STR(MQTT_PASS);
+char clientId [] = STR(MQTT_CLIENT);
 
 char topicOut[50];
 char topicIn[50] ;
